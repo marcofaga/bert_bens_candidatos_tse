@@ -1,0 +1,66 @@
+# Carrega os pacotes necessários
+library(tidymodels)
+library(textrecipes)
+library(tibble)
+
+# 1. Criação de uma base de dados simulada com duas colunas: "texto" e "classificacao"
+dados <- tibble(
+  texto = c("O dia está ensolarado e bonito", 
+            "A economia está em crise e preocupante", 
+            "Que dia maravilhoso para aproveitar a vida", 
+            "Situação política complicada no país", 
+            "Clima agradável e tempo perfeito para passeio", 
+            "Desemprego e inflação altos preocupam a população"),
+  classificacao = factor(c("positivo", "negativo", "positivo", "negativo", "positivo", "negativo"))
+)
+
+# 2. Divisão dos dados em conjunto de treino e teste
+set.seed(123)
+split <- initial_split(dados, prop = 0.8)
+treino <- training(split)
+teste <- testing(split)
+
+# 3. Criação do recipe para pré-processamento do texto:
+#    - Tokenização dos textos
+#    - Remoção de stopwords (em português)
+#    - Filtragem dos tokens (mantendo os que aparecem ao menos uma vez)
+#    - Cálculo da representação TF-IDF
+rec <- recipe(classificacao ~ texto, data = treino) %>%
+  step_tokenize(texto) %>%                            # Quebra o texto em tokens
+  step_stopwords(texto, language = "pt") %>%          # Remove palavras de pouca relevância
+  step_tokenfilter(texto, min_times = 1) %>%            # Filtra tokens com baixa frequência
+  step_tfidf(texto)                                   # Calcula a matriz TF-IDF
+
+
+# para visualizar a matrix TF-IDF
+# Preparar o recipe com os dados de treino
+rec_prep <- prep(rec, training = treino)
+# Aplicar o recipe e extrair a matriz TF-IDF dos dados de treino
+dados_tfidf <- bake(rec_prep, new_data = treino)
+
+
+# 4. Especificação do modelo Random Forest usando o engine 'ranger'
+modelo_rf <- rand_forest(mtry = 2, trees = 500, min_n = 2) %>%
+  set_engine("ranger") %>%
+  set_mode("classification")
+
+# 5. Criação do workflow: integra o recipe e o modelo
+wf <- workflow() %>%
+  add_model(modelo_rf) %>%
+  add_recipe(rec)
+
+# 6. Treinamento do modelo com os dados de treino
+fit_rf <- wf %>% fit(data = treino)
+
+# 7. Realizando previsões no conjunto de teste
+previsoes <- fit_rf %>% 
+  predict(teste) %>% 
+  bind_cols(teste)
+
+# 8. Avaliação do modelo (matriz de confusão e métricas)
+confusao <- previsoes %>% conf_mat(truth = classificacao, estimate = .pred_class)
+metricas <- previsoes %>% metrics(truth = classificacao, estimate = .pred_class)
+
+# Exibe os resultados
+print(confusao)
+print(metricas)

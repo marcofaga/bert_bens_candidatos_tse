@@ -1,0 +1,11 @@
+set.seed(123)
+df <- data.frame(
+  loja = rep(LETTERS[1:5], each = 10),  # 5 lojas
+  vendas = rnorm(50, mean = 100, sd = 10)  # Vendas simuladas
+)
+
+# Criar amostras bootstrap mantendo a estrutura por loja
+boot_samples <- group_bootstraps(df, group = "loja", times = 10)
+
+# Ver a primeira amostra bootstrap
+print(boot_samples$splits[[1]])

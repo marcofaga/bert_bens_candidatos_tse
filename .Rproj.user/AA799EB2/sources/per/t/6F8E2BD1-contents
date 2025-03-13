@@ -1,0 +1,86 @@
+# Carrega os pacotes necessários
+library(tidymodels)
+library(textrecipes)
+library(tibble)
+library(stringi)
+library(dials)
+library(parallel)
+
+set.seed(123)
+
+# 1. Criação do dataset fictício (n = 1000)
+# Geramos textos aleatórios a partir de uma lista de palavras
+words <- c("foo", "bar", "baz", "qux", "quux", "corge", 
+           "grault", "garply", "waldo", "fred", "plugh", "xyzzy", "thud")
+
+df <- tibble(
+  text = replicate(1000, paste(sample(words, sample(5:15, 1), replace = TRUE), collapse = " ")),
+  label = factor(sample(c("A", "B"), 1000, replace = TRUE))
+)
+
+# 2. Definição do recipe para pré-processamento dos textos
+# O recipe tokeniza o texto, remove stopwords, filtra tokens e aplica TF-IDF
+rec <- recipe(label ~ text, data = df) %>%
+  step_tokenize(text) %>%                      # Divide o texto em tokens
+  step_stopwords(text, language = "en") %>%      # Remove palavras irrelevantes
+  step_tokenfilter(text, max_tokens = 500) %>%   # Mantém os 500 tokens mais frequentes
+  step_tfidf(text)                             # Calcula a matriz TF-IDF
+
+# 3. Especificação do modelo Random Forest com hiperparâmetros a serem ajustados
+rf_spec <- rand_forest(
+  mtry = tune(),   # Número de preditores avaliados em cada divisão (a ser ajustado)
+  trees = 500,     # Número de árvores na floresta
+  min_n = tune()   # Número mínimo de observações em um nó (a ser ajustado)
+) %>%
+  set_engine("ranger", verbose = TRUE, num.threads = detectCores()) %>%
+  set_mode("classification")
+
+# 4. Criação do workflow que une o recipe e o modelo
+wf <- workflow() %>%
+  add_recipe(rec) %>%
+  add_model(rf_spec)
+
+# 5. Definição da validação cruzada (5-fold) estratificada pela variável resposta
+set.seed(123)
+folds <- vfold_cv(df, v = 5, strata = label)
+
+# 6. Preparação dos dados para identificar o número de preditores gerados pelo recipe
+rec_prep <- prep(rec, training = df)
+baked_data <- bake(rec_prep, new_data = df)
+# Considerando que a coluna 'label' é a resposta:
+n_pred <- ncol(baked_data) - 1
+
+# 7. Criação do grid de hiperparâmetros
+# Para 'mtry', definimos valores a partir de 10% até 100% do total de preditores
+grid_rf <- grid_regular(
+  mtry(range = c(max(1, floor(0.1 * n_pred)), n_pred)),
+  min_n(range = c(2, 10)),
+  levels = 5
+)
+
+# Visualiza o grid de parâmetros
+print(grid_rf)
+
+# 8. Tuning do modelo usando tune_grid com a validação cruzada definida
+set.seed(123)
+tune_results <- tune_grid(
+  wf,
+  resamples = folds,
+  grid = grid_rf,
+  metrics = metric_set(accuracy, roc_auc)
+)
+
+# Coleta as métricas de performance dos diferentes conjuntos de parâmetros
+tune_metrics <- collect_metrics(tune_results)
+print(tune_metrics)
+
+# 9. Seleção dos melhores parâmetros com base na acurácia
+best_params <- select_best(tune_results, metric = "accuracy")
+print(best_params)
+
+# 10. Finaliza o workflow com os melhores parâmetros e treina o modelo final
+final_wf <- finalize_workflow(wf, best_params)
+final_model <- final_wf %>% fit(data = df)
+
+# Exibe o modelo final
+print(final_model)

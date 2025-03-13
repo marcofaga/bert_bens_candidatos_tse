@@ -1,0 +1,8 @@
+*.parquet
+*.gsheet
+*.gslides
+*.csv
+.obsidian/
+.ipynb_checkpoints/
+*.safetensors
+
