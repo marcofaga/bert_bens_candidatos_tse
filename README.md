@@ -1,6 +1,19 @@
-# Categorização da base de dados de Bens de Candidatos de 2006 a 2022.
-
+# Categorização de Bens de Candidatos com Deep Learning (2006–2022)
 10 de março de 2025
+
+## Geral
+---
+
+Este projeto tem como objetivo a padronização e categorização automatizada da base de bens declarados por candidatos(as) em eleições brasileiras entre 2006 e 2022, disponibilizada pelo TSE. A base original apresenta alto grau de inconsistência, com mais de 4 milhões de registros e uma grande variedade de descrições livres e categorias não padronizadas ao longo dos anos.
+
+A primeira etapa envolveu a **reclassificação manual** de 54 categorias originais para **seis categorias principais**, representando classes gerais de patrimônio: imóveis, veículos, investimentos, participações societárias, outros bens e ausência de bens declarados.
+
+Com essa categorização consolidada, a segunda etapa consistiu no **treinamento de um modelo de rede neural baseado no BERTimbau**, um modelo BERT pré-treinado para a língua portuguesa. A rede passou por *fine-tuning* supervisionado para aprender a classificar automaticamente as descrições livres dos bens (campo `DS_BEM_CANDIDATO`) nas novas categorias padronizadas.
+
+O modelo demonstrou **altíssima performance**, atingindo uma taxa de acerto de 99,3% em uma validação manual amostral e 95,3% quando comparado diretamente às classificações manuais.
+
+O projeto combina técnicas de pré-processamento em R e modelagem com NLP em Python, sendo um exemplo robusto de aplicação prática de **redes neurais em PLN (Processamento de Linguagem Natural)** para resolver um problema real de padronização em grandes bases públicas.
+
 ## Escopo
 
 A base de dados de bens de candidatos do TSE possui entre outras as seguintes variáveis:
