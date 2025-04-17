@@ -1,9 +1,6 @@
 # Categorização de Bens de Candidatos com Deep Learning (2006–2022)
 10 de março de 2025
 
-## Geral
----
-
 Este projeto tem como objetivo a padronização e categorização automatizada da base de bens declarados por candidatos(as) em eleições brasileiras entre 2006 e 2022, disponibilizada pelo TSE. A base original apresenta alto grau de inconsistência, com mais de 4 milhões de registros e uma grande variedade de descrições livres e categorias não padronizadas ao longo dos anos.
 
 A primeira etapa envolveu a **reclassificação manual** de 54 categorias originais para **seis categorias principais**, representando classes gerais de patrimônio: imóveis, veículos, investimentos, participações societárias, outros bens e ausência de bens declarados.
